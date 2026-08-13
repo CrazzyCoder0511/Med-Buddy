@@ -91,4 +91,4 @@ The current Supabase project URL and public anonymous key are configured in `clo
 
 ## License
 
-No license has been specified for this repository.
+All rights reserved. See [LICENSE](LICENSE).

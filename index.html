@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="styles.css?v=35" />
+<link rel="stylesheet" href="styles.css?v=37" />
 <script>
   /* Apply the saved theme before first paint so there's no flash. */
   try {
@@ -32,6 +32,7 @@
     <h1>MedBuddy</h1>
   </div>
   <nav class="tabs" role="tablist">
+    <div id="tab-indicator" class="tab-indicator" aria-hidden="true"></div>
     <button class="tab is-active" data-view="home" role="tab">Home</button>
     <button class="tab" data-view="today" role="tab">Today</button>
     <button class="tab" data-view="meds" role="tab">Prescriptions</button>
@@ -207,12 +208,19 @@
 
     <div class="today-head">
       <div>
+        <p id="greeting" class="greeting"></p>
         <h2 id="today-date">Today</h2>
         <p id="today-summary" class="muted">No medications yet.</p>
       </div>
-      <button id="test-alarm" class="btn btn-ghost" title="Fires a real alarm in 10 seconds">
-        Test alarm (10s)
-      </button>
+      <div class="today-head-actions">
+        <span id="streak-badge" class="streak-badge" hidden>
+          <span class="streak-flame">&#x1F525;</span>
+          <span id="streak-count">0</span>
+        </span>
+        <button id="test-alarm" class="btn btn-ghost" title="Fires a real alarm in 10 seconds">
+          Test alarm (10s)
+        </button>
+      </div>
     </div>
 
     <div id="dash" class="dash" hidden>
@@ -503,6 +511,7 @@
 <!-- ================= INSURANCE DOCUMENT VIEWER ================= -->
 <div id="ins-viewer" class="sheet" hidden>
   <div class="sheet-panel ins-viewer-panel" role="dialog" aria-modal="true">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <button id="ins-viewer-close" class="sheet-close" aria-label="Close">&times;</button>
     <div id="ins-viewer-body"></div>
   </div>
@@ -511,6 +520,7 @@
 <!-- ================= INSTRUCTION SHEET ================= -->
 <div id="sheet" class="sheet" hidden>
   <div class="sheet-panel" role="dialog" aria-modal="true">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <button id="sheet-close" class="sheet-close" aria-label="Close">&times;</button>
     <div id="sheet-body"></div>
   </div>
@@ -556,12 +566,15 @@
   </div>
 </div>
 
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud.js?v=35"></script>
-<script src="parser.js?v=35"></script>
-<script src="doctors.js?v=35"></script>
-<script src="scanner.js?v=35"></script>
-<script src="insurance.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="cloud.js?v=37"></script>
+<script src="parser.js?v=37"></script>
+<script src="doctors.js?v=37"></script>
+<script src="scanner.js?v=37"></script>
+<script src="insurance.js?v=37"></script>
+<script src="sheet-controller.js?v=37"></script>
+<script src="app.js?v=37"></script>
 </body>
 </html>

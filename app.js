@@ -11,6 +11,8 @@ const EMPTY_INSURANCE = {
 let state = { meds: [], log: {}, snooze: {}, insurance: { ...EMPTY_INSURANCE } };
 let pending = null;          // parse result awaiting confirmation
 let readonly = false;
+let medSheet = null;         // SheetController for the instruction sheet
+let insViewerSheet = null;   // SheetController for the insurance document viewer
 const firedThisSession = new Set();
 
 /* --------------------------------------------------------------------- */
@@ -260,7 +262,11 @@ function renderToday() {
     day: 'numeric',
   });
 
+  const g = greetingForNow(now);
+  $('#greeting').textContent = g.icon + ' ' + g.text;
+
   const taken = doses.filter((d) => state.log[d.key] === 'taken').length;
+  const pct = doses.length ? Math.round((taken / doses.length) * 100) : 0;
 
   $('#today-empty').hidden = doses.length > 0;
   $('#timeline').hidden = doses.length === 0;
@@ -269,11 +275,20 @@ function renderToday() {
     ? `${taken} of ${doses.length} doses taken`
     : 'No medications yet.';
 
+  const streak = computeStreak();
+  const streakBadge = $('#streak-badge');
+  if (streak > 0) {
+    streakBadge.hidden = false;
+    $('#streak-count').textContent = streak;
+    streakBadge.classList.toggle('is-hot', pct === 100 && doses.length > 0);
+  } else {
+    streakBadge.hidden = true;
+  }
+
   // Dashboard
   const hasMeds = state.meds.length > 0;
   $('#dash').hidden = !hasMeds;
   if (hasMeds) {
-    const pct = doses.length ? Math.round((taken / doses.length) * 100) : 0;
     $('#dash-progress').textContent = pct + '%';
     $('#dash-bar-fill').style.width = pct + '%';
     const activeMeds = state.meds.filter(m => isActiveOn(m, iso));
@@ -285,7 +300,7 @@ function renderToday() {
       totalTaken += s.taken;
     }
     $('#dash-adherence').textContent = totalDue ? Math.round((totalTaken / totalDue) * 100) + '%' : '—';
-    $('#dash-streak').textContent = computeStreak();
+    $('#dash-streak').textContent = streak;
   }
 
   // Next upcoming dose banner
@@ -332,11 +347,16 @@ function renderToday() {
     if (!readonly) {
       const check = document.createElement('button');
       check.className = 'dose-check';
+      check.dataset.key = dose.key;
       check.setAttribute(
         'aria-label',
         status === 'taken' ? `Mark ${dose.med.name} as not taken` : `Mark ${dose.med.name} as taken`
       );
-      check.addEventListener('click', () => toggleTaken(dose.key));
+      check.addEventListener('click', () => {
+        const rect = check.getBoundingClientRect();
+        const justTaken = toggleTaken(dose.key);
+        if (justTaken) celebrateDose(rect.left + rect.width / 2, rect.top + rect.height / 2, dose.key);
+      });
       li.append(check);
     } else {
       const mark = document.createElement('span');
@@ -370,10 +390,88 @@ function relativeTime(then, now) {
 }
 
 function toggleTaken(key) {
-  if (state.log[key] === 'taken') delete state.log[key];
+  const wasTaken = state.log[key] === 'taken';
+  if (wasTaken) delete state.log[key];
   else state.log[key] = 'taken';
   save();
   renderToday();
+  return !wasTaken; // true when this call just marked it taken
+}
+
+function greetingForNow(now) {
+  const h = now.getHours();
+  if (h < 5) return { icon: '🌙', text: 'Still up?' };
+  if (h < 12) return { icon: '☀️', text: 'Good morning' };
+  if (h < 17) return { icon: '🌤️', text: 'Good afternoon' };
+  if (h < 21) return { icon: '🌇', text: 'Good evening' };
+  return { icon: '🌙', text: 'Good night' };
+}
+
+/* --------------------------------------------------------------------- */
+/* Celebration — confetti burst + checkmark pop on marking a dose taken   */
+/* --------------------------------------------------------------------- */
+
+const CONFETTI_COLORS = ['#12805c', '#34caa0', '#e8794a', '#eda253', '#2f7ed8'];
+
+function burstConfetti(x, y) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const canvas = document.getElementById('confetti-canvas');
+  if (!canvas || !canvas.getContext) return;
+  if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  const ctx = canvas.getContext('2d');
+
+  const count = 22;
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const speed = 2 + Math.random() * 3.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      size: 3 + Math.random() * 3,
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      life: 1,
+      rotation: Math.random() * Math.PI,
+      spin: (Math.random() - 0.5) * 0.4,
+    });
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    for (const p of particles) {
+      if (p.life <= 0) continue;
+      alive = true;
+      p.vy += 0.12; // gravity
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rotation += p.spin;
+      p.life -= 0.018;
+      ctx.save();
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+    if (alive) requestAnimationFrame(tick);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  requestAnimationFrame(tick);
+}
+
+function celebrateDose(x, y, key) {
+  burstConfetti(x, y);
+  const btn = document.querySelector('.dose-check[data-key="' + CSS.escape(key) + '"]');
+  if (btn) {
+    btn.classList.add('pop');
+    btn.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
+  }
 }
 
 /* --------------------------------------------------------------------- */
@@ -770,11 +868,11 @@ function openSheet(med) {
     body.append(del);
   }
 
-  $('#sheet').hidden = false;
+  medSheet.open();
 }
 
 function closeSheet() {
-  $('#sheet').hidden = true;
+  medSheet.dismiss();
 }
 
 /* --------------------------------------------------------------------- */
@@ -1147,6 +1245,14 @@ function tryReadonlyMode() {
 /* Views                                                                  */
 /* --------------------------------------------------------------------- */
 
+function positionTabIndicator() {
+  const indicator = $('#tab-indicator');
+  const active = document.querySelector('.tab.is-active');
+  if (!indicator || !active) return;
+  indicator.style.width = active.offsetWidth + 'px';
+  indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+}
+
 function switchView(name) {
   // Slide the incoming view from the side you're moving toward.
   const prev = document.querySelector('.view.is-active');
@@ -1164,6 +1270,7 @@ function switchView(name) {
   }
 
   $$('.tab').forEach((t) => t.classList.toggle('is-active', t.dataset.view === name));
+  positionTabIndicator();
   // Instant, not smooth — a tab switch is a new page, not a scroll.
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -1342,6 +1449,11 @@ function initInsurance() {
     if (doc) viewInsuranceDoc(doc);
   });
 
+  insViewerSheet = new SheetController(
+    $('#ins-viewer'),
+    document.querySelector('#ins-viewer .sheet-panel'),
+    document.querySelector('#ins-viewer .sheet-handle')
+  );
   $('#ins-viewer-close').addEventListener('click', closeInsuranceViewer);
   $('#ins-viewer').addEventListener('click', (e) => {
     if (e.target.id === 'ins-viewer') closeInsuranceViewer();
@@ -1521,11 +1633,11 @@ function viewInsuranceDoc(doc) {
     body.append(p, link);
   }
 
-  $('#ins-viewer').hidden = false;
+  insViewerSheet.open();
 }
 
 function closeInsuranceViewer() {
-  $('#ins-viewer').hidden = true;
+  insViewerSheet.dismiss();
 }
 
 /* --------------------------------------------------------------------- */
@@ -2099,6 +2211,11 @@ function init() {
   $('#alarm-snooze').addEventListener('click', () => dismissAlarm('snooze'));
   $('#share-btn').addEventListener('click', shareWithCaregiver);
 
+  medSheet = new SheetController(
+    $('#sheet'),
+    document.querySelector('#sheet .sheet-panel'),
+    document.querySelector('#sheet .sheet-handle')
+  );
   $('#sheet-close').addEventListener('click', closeSheet);
   $('#sheet').addEventListener('click', (e) => {
     if (e.target.id === 'sheet') closeSheet();
@@ -2113,6 +2230,8 @@ function init() {
   initInstallPrompt();
   initInsurance();
   initScrollFx();
+  positionTabIndicator();
+  window.addEventListener('resize', positionTabIndicator);
   renderAll();
 
   setInterval(() => {
