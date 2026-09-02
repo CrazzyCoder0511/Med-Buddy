@@ -7,15 +7,15 @@
 <meta name="description" content="Paste what your doctor told you. MedBuddy turns it into a dose schedule with alarms and plain-language instructions." />
 <meta name="theme-color" content="#12805c" />
 <link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="medbuddy-icon.png" type="image/png" />
+<link rel="apple-touch-icon" href="medbuddy-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="MedBuddy" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="styles.css?v=35" />
+<link rel="stylesheet" href="styles.css?v=38" />
 <script>
   /* Apply the saved theme before first paint so there's no flash. */
   try {
@@ -28,10 +28,11 @@
 
 <header class="topbar">
   <div class="brand">
-    <img class="mark" src="icon.svg" width="28" height="28" alt="" />
+    <img class="mark" src="medbuddy-icon.png" width="28" height="28" alt="" />
     <h1>MedBuddy</h1>
   </div>
   <nav class="tabs" role="tablist">
+    <div id="tab-indicator" class="tab-indicator" aria-hidden="true"></div>
     <button class="tab is-active" data-view="home" role="tab">Home</button>
     <button class="tab" data-view="today" role="tab">Today</button>
     <button class="tab" data-view="meds" role="tab">Prescriptions</button>
@@ -193,6 +194,15 @@
       <a href="https://github.com/CrazzyCoder0511/Med-Buddy" target="_blank" rel="noopener">GitHub</a>
     </p>
 
+    <p>
+      <font color="#DBAA8A" style="text-align: left;">
+        By - Ayaan Mehrotra
+        <a herf="https://github.com/CrazzyCoder0511">GitHub</a> <br>
+        <a herf="https://www.linkedin.com/in/ayaan-mehrotra-292584404/">LinkedIn</a> <br>
+        Email - a.mehrotra0511@gmail.com <br>
+      </font>
+    </p>
+
   </section>
 
   <!-- ================= TODAY ================= -->
@@ -207,12 +217,19 @@
 
     <div class="today-head">
       <div>
+        <p id="greeting" class="greeting"></p>
         <h2 id="today-date">Today</h2>
         <p id="today-summary" class="muted">No medications yet.</p>
       </div>
-      <button id="test-alarm" class="btn btn-ghost" title="Fires a real alarm in 10 seconds">
-        Test alarm (10s)
-      </button>
+      <div class="today-head-actions">
+        <span id="streak-badge" class="streak-badge" hidden>
+          <span class="streak-flame">&#x1F525;</span>
+          <span id="streak-count">0</span>
+        </span>
+        <button id="test-alarm" class="btn btn-ghost" title="Fires a real alarm in 10 seconds">
+          Test alarm (10s)
+        </button>
+      </div>
     </div>
 
     <div id="dash" class="dash" hidden>
@@ -503,6 +520,7 @@
 <!-- ================= INSURANCE DOCUMENT VIEWER ================= -->
 <div id="ins-viewer" class="sheet" hidden>
   <div class="sheet-panel ins-viewer-panel" role="dialog" aria-modal="true">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <button id="ins-viewer-close" class="sheet-close" aria-label="Close">&times;</button>
     <div id="ins-viewer-body"></div>
   </div>
@@ -511,6 +529,7 @@
 <!-- ================= INSTRUCTION SHEET ================= -->
 <div id="sheet" class="sheet" hidden>
   <div class="sheet-panel" role="dialog" aria-modal="true">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <button id="sheet-close" class="sheet-close" aria-label="Close">&times;</button>
     <div id="sheet-body"></div>
   </div>
@@ -536,7 +555,7 @@
 <!-- ================= AUTH ================= -->
 <div id="auth" class="auth" hidden>
   <div class="auth-card">
-    <img class="auth-logo" src="icon.svg" width="64" height="64" alt="" />
+    <img class="auth-logo" src="medbuddy-icon.png" width="64" height="64" alt="" />
     <h2>MedBuddy</h2>
     <p class="auth-tagline">Your medications, simplified.</p>
     <p class="muted small">Sign in so your schedule follows you across devices — and stays yours alone.</p>
@@ -556,12 +575,15 @@
   </div>
 </div>
 
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud.js?v=35"></script>
-<script src="parser.js?v=35"></script>
-<script src="doctors.js?v=35"></script>
-<script src="scanner.js?v=35"></script>
-<script src="insurance.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="cloud.js?v=38"></script>
+<script src="parser.js?v=38"></script>
+<script src="doctors.js?v=38"></script>
+<script src="scanner.js?v=38"></script>
+<script src="insurance.js?v=38"></script>
+<script src="sheet-controller.js?v=38"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>

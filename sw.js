@@ -2,20 +2,20 @@
    enough to make it work with no connection at all. */
 
 /* Bump CACHE whenever the ?v= query on the assets changes. */
-const CACHE = 'dosenote-v35';
+const CACHE = 'dosenote-v38';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=35',
-  './parser.js?v=35',
-  './doctors.js?v=35',
-  './scanner.js?v=35',
-  './insurance.js?v=35',
-  './cloud.js?v=35',
-  './app.js?v=35',
+  './styles.css?v=38',
+  './parser.js?v=38',
+  './doctors.js?v=38',
+  './scanner.js?v=38',
+  './insurance.js?v=38',
+  './cloud.js?v=38',
+  './sheet-controller.js?v=38',
+  './app.js?v=38',
   './manifest.json',
-  './icon.svg',
-  './mark.svg',
+  './medbuddy-icon.png',
 ];
 
 self.addEventListener('install', (event) => {
