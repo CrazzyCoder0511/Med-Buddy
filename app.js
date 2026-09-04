@@ -277,13 +277,16 @@ function renderToday() {
 
   const streak = computeStreak();
   const streakBadge = $('#streak-badge');
+  const todayComplete = pct === 100 && doses.length > 0;
   if (streak > 0) {
     streakBadge.hidden = false;
     $('#streak-count').textContent = streak;
-    streakBadge.classList.toggle('is-hot', pct === 100 && doses.length > 0);
+    streakBadge.classList.toggle('is-hot', todayComplete);
   } else {
     streakBadge.hidden = true;
   }
+  if (todayComplete) celebrateMilestoneIfNeeded(streak);
+  if (window.Cloud && Cloud.isSignedIn()) updateLeaderboardStreak(streak);
 
   // Dashboard
   const hasMeds = state.meds.length > 0;
@@ -413,7 +416,7 @@ function greetingForNow(now) {
 
 const CONFETTI_COLORS = ['#12805c', '#34caa0', '#e8794a', '#eda253', '#2f7ed8'];
 
-function burstConfetti(x, y) {
+function burstConfetti(x, y, scale) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const canvas = document.getElementById('confetti-canvas');
   if (!canvas || !canvas.getContext) return;
@@ -423,11 +426,12 @@ function burstConfetti(x, y) {
   }
   const ctx = canvas.getContext('2d');
 
-  const count = 22;
+  const mult = scale || 1;
+  const count = Math.round(22 * mult);
   const particles = [];
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
-    const speed = 2 + Math.random() * 3.5;
+    const speed = (2 + Math.random() * 3.5) * Math.min(mult, 1.6);
     particles.push({
       x, y,
       vx: Math.cos(angle) * speed,
@@ -472,6 +476,174 @@ function celebrateDose(x, y, key) {
     btn.classList.add('pop');
     btn.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
   }
+}
+
+/* Bigger celebration the first time a streak crosses a milestone.
+   Purely cosmetic, so it lives in localStorage rather than synced state. */
+const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100, 200, 365];
+const LAST_MILESTONE_KEY = 'medbuddy.lastMilestone';
+
+function celebrateMilestoneIfNeeded(streak) {
+  if (!STREAK_MILESTONES.includes(streak)) return;
+  let last = 0;
+  try {
+    last = parseInt(localStorage.getItem(LAST_MILESTONE_KEY) || '0', 10) || 0;
+  } catch (err) {
+    void err;
+  }
+  if (streak <= last) return;
+  try {
+    localStorage.setItem(LAST_MILESTONE_KEY, String(streak));
+  } catch (err) {
+    void err;
+  }
+
+  // Three staggered bursts across the top of the screen, bigger than a
+  // single-dose celebration.
+  const w = window.innerWidth;
+  const spots = [w * 0.25, w * 0.5, w * 0.75];
+  spots.forEach((x, i) => {
+    setTimeout(() => burstConfetti(x, window.innerHeight * 0.28, 1.8), i * 140);
+  });
+  toast('🔥 ' + streak + '-day streak!');
+}
+
+/* --------------------------------------------------------------------- */
+/* Leaderboard — opt-in. Only a nickname and streak number ever leave     */
+/* the device for this feature; medication data never does.              */
+/* --------------------------------------------------------------------- */
+
+let leaderboardSheet = null;
+let myLeaderboardEntry = null; // { display_name, streak } once opted in, else null
+
+function initLeaderboard() {
+  const badge = $('#streak-badge');
+  if (badge) badge.addEventListener('click', openLeaderboard);
+
+  leaderboardSheet = new SheetController(
+    $('#leaderboard-sheet'),
+    document.querySelector('#leaderboard-sheet .sheet-panel'),
+    document.querySelector('#leaderboard-sheet .sheet-handle')
+  );
+  $('#leaderboard-close').addEventListener('click', () => leaderboardSheet.dismiss());
+  $('#leaderboard-sheet').addEventListener('click', (e) => {
+    if (e.target.id === 'leaderboard-sheet') leaderboardSheet.dismiss();
+  });
+
+  $('#lb-join').addEventListener('click', joinLeaderboardFlow);
+  $('#lb-nickname').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') joinLeaderboardFlow();
+  });
+  $('#lb-leave').addEventListener('click', leaveLeaderboardFlow);
+}
+
+function showLbError(msg) {
+  const el = $('#lb-error');
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+async function openLeaderboard() {
+  if (readonly) return; // a caregiver's read-only link never touches the cloud
+  if (!window.Cloud || !Cloud.isSignedIn()) {
+    toast('Sign in to use the leaderboard');
+    return;
+  }
+  leaderboardSheet.open();
+  await refreshLeaderboardView();
+}
+
+async function refreshLeaderboardView() {
+  $('#lb-error').hidden = true;
+  try {
+    myLeaderboardEntry = await Cloud.getMyLeaderboardEntry();
+  } catch (err) {
+    void err;
+    showLbError('Could not reach the leaderboard right now.');
+    return;
+  }
+
+  $('#lb-joined').hidden = !myLeaderboardEntry;
+  $('#lb-join-form').hidden = !!myLeaderboardEntry;
+
+  if (myLeaderboardEntry) {
+    $('#lb-my-name').textContent = myLeaderboardEntry.display_name;
+    await renderLeaderboardList();
+  }
+}
+
+async function renderLeaderboardList() {
+  let rows = [];
+  try {
+    rows = await Cloud.fetchLeaderboard(50);
+  } catch (err) {
+    void err;
+  }
+  const list = $('#lb-list');
+  list.innerHTML = '';
+  $('#lb-empty').hidden = rows.length > 0;
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const myId = Cloud.userId();
+  rows.forEach((row, i) => {
+    const el = document.createElement('div');
+    el.className = 'lb-row' + (row.user_id === myId ? ' is-me' : '');
+
+    const rank = document.createElement('span');
+    rank.className = 'lb-rank';
+    rank.textContent = medals[i] || String(i + 1);
+
+    const name = document.createElement('span');
+    name.className = 'lb-name';
+    name.textContent = row.display_name;
+
+    const streakEl = document.createElement('span');
+    streakEl.className = 'lb-streak';
+    streakEl.textContent = '🔥 ' + row.streak;
+
+    el.append(rank, name, streakEl);
+    list.append(el);
+  });
+}
+
+async function joinLeaderboardFlow() {
+  const name = $('#lb-nickname').value.trim();
+  if (!name) {
+    $('#lb-nickname').focus();
+    return;
+  }
+  const btn = $('#lb-join');
+  btn.disabled = true;
+  try {
+    await Cloud.joinLeaderboard(name, computeStreak());
+    $('#lb-nickname').value = '';
+    await refreshLeaderboardView();
+    toast('Joined the leaderboard ✓');
+  } catch (err) {
+    showLbError(err.message || 'Could not join right now.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function leaveLeaderboardFlow() {
+  try {
+    await Cloud.leaveLeaderboard();
+    myLeaderboardEntry = null;
+    await refreshLeaderboardView();
+    toast('Left the leaderboard');
+  } catch (err) {
+    showLbError(err.message || 'Could not leave right now.');
+  }
+}
+
+/* Keep the cloud streak current whenever it changes locally, so other
+   players see it without the user having to reopen the leaderboard. */
+let lastPushedStreak = null;
+function updateLeaderboardStreak(streak) {
+  if (!myLeaderboardEntry || streak === lastPushedStreak) return;
+  lastPushedStreak = streak;
+  Cloud.updateMyStreak(streak).catch((err) => console.warn('Streak sync failed:', err));
 }
 
 /* --------------------------------------------------------------------- */
@@ -2229,6 +2401,7 @@ function init() {
   initScanner();
   initInstallPrompt();
   initInsurance();
+  initLeaderboard();
   initScrollFx();
   positionTabIndicator();
   window.addEventListener('resize', positionTabIndicator);
@@ -2291,6 +2464,14 @@ async function hydrateFromCloud() {
     }
   } catch (err) {
     console.warn('Could not reach the cloud — using the local copy.', err);
+  }
+
+  // Quietly check leaderboard membership so streak updates sync in the
+  // background without the user needing to open the sheet first.
+  try {
+    myLeaderboardEntry = await Cloud.getMyLeaderboardEntry();
+  } catch (err) {
+    void err; // leaderboard table may not exist yet — never blocks boot
   }
 }
 

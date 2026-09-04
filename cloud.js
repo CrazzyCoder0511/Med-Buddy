@@ -85,6 +85,67 @@ const SUPABASE_ANON_KEY =
   }
 
   /* ------------------------------------------------------------------- */
+  /* Leaderboard — opt-in only. Only a chosen nickname and a streak       */
+  /* number are ever written here, never anything from `state` itself —  */
+  /* the medication data stays exactly as private as before.             */
+  /* ------------------------------------------------------------------- */
+
+  async function getMyLeaderboardEntry() {
+    if (!signedIn) return null;
+    const { data, error } = await client()
+      .from('leaderboard')
+      .select('display_name, streak')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.warn('Leaderboard read failed:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  async function joinLeaderboard(displayName, streak) {
+    if (!signedIn) return;
+    const { error } = await client().from('leaderboard').upsert({
+      user_id: currentUser.id,
+      display_name: displayName.slice(0, 24),
+      streak: streak || 0,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  }
+
+  async function leaveLeaderboard() {
+    if (!signedIn) return;
+    const { error } = await client().from('leaderboard').delete().eq('user_id', currentUser.id);
+    if (error) throw error;
+  }
+
+  /* Called whenever the local streak changes — a silent no-op if the
+     user never opted in, since an update to a missing row updates 0 rows. */
+  async function updateMyStreak(streak) {
+    if (!signedIn) return;
+    const { error } = await client()
+      .from('leaderboard')
+      .update({ streak, updated_at: new Date().toISOString() })
+      .eq('user_id', currentUser.id);
+    if (error) console.warn('Leaderboard streak update failed:', error.message);
+  }
+
+  async function fetchLeaderboard(limit) {
+    const { data, error } = await client()
+      .from('leaderboard')
+      .select('user_id, display_name, streak')
+      .order('streak', { ascending: false })
+      .limit(limit || 50);
+    if (error) {
+      console.warn('Leaderboard fetch failed:', error.message);
+      return [];
+    }
+    return data || [];
+  }
+
+  /* ------------------------------------------------------------------- */
   /* Auth screen                                                          */
   /* ------------------------------------------------------------------- */
 
@@ -207,5 +268,10 @@ const SUPABASE_ANON_KEY =
     pushStateDebounced,
     showAuthScreen,
     signOut,
+    getMyLeaderboardEntry,
+    joinLeaderboard,
+    leaveLeaderboard,
+    updateMyStreak,
+    fetchLeaderboard,
   };
 })();

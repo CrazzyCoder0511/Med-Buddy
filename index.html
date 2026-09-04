@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="styles.css?v=38" />
+<link rel="stylesheet" href="styles.css?v=39" />
 <script>
   /* Apply the saved theme before first paint so there's no flash. */
   try {
@@ -223,10 +223,10 @@
         <p id="today-summary" class="muted">No medications yet.</p>
       </div>
       <div class="today-head-actions">
-        <span id="streak-badge" class="streak-badge" hidden>
+        <button id="streak-badge" class="streak-badge" hidden title="See the leaderboard">
           <span class="streak-flame">&#x1F525;</span>
           <span id="streak-count">0</span>
-        </span>
+        </button>
         <button id="test-alarm" class="btn btn-ghost" title="Fires a real alarm in 10 seconds">
           Test alarm (10s)
         </button>
@@ -536,6 +536,37 @@
   </div>
 </div>
 
+<!-- ================= LEADERBOARD ================= -->
+<div id="leaderboard-sheet" class="sheet" hidden>
+  <div class="sheet-panel" role="dialog" aria-modal="true">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <button id="leaderboard-close" class="sheet-close" aria-label="Close">&times;</button>
+
+    <h2>&#x1F525; Streak Leaderboard</h2>
+
+    <div id="lb-joined" hidden>
+      <p class="muted small">
+        Playing as <strong id="lb-my-name"></strong>. Only your nickname and streak count
+        are shared — never your medications.
+      </p>
+      <div id="lb-list" class="lb-list"></div>
+      <p id="lb-empty" class="muted small" hidden>No one's on the board yet — be the first!</p>
+      <button id="lb-leave" class="linkbtn small">Leave the leaderboard</button>
+    </div>
+
+    <div id="lb-join-form">
+      <p class="muted small">
+        Compare streaks with other MedBuddy users. Pick a nickname — your medications and
+        health data are never shared, only this name and your day-streak number.
+      </p>
+      <input type="text" id="lb-nickname" placeholder="Pick a nickname" maxlength="24" />
+      <button id="lb-join" class="btn btn-primary btn-big">Join the leaderboard</button>
+    </div>
+
+    <p id="lb-error" class="auth-error" hidden></p>
+  </div>
+</div>
+
 <!-- ================= ALARM ================= -->
 <div id="alarm" class="alarm" hidden>
   <div class="alarm-inner">
@@ -579,12 +610,12 @@
 <canvas id="confetti-canvas" aria-hidden="true"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="cloud.js?v=38"></script>
-<script src="parser.js?v=38"></script>
-<script src="doctors.js?v=38"></script>
-<script src="scanner.js?v=38"></script>
-<script src="insurance.js?v=38"></script>
-<script src="sheet-controller.js?v=38"></script>
-<script src="app.js?v=38"></script>
+<script src="cloud.js?v=39"></script>
+<script src="parser.js?v=39"></script>
+<script src="doctors.js?v=39"></script>
+<script src="scanner.js?v=39"></script>
+<script src="insurance.js?v=39"></script>
+<script src="sheet-controller.js?v=39"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>
