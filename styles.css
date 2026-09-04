@@ -413,6 +413,9 @@ main { max-width: 640px; margin: 0 auto; padding: 1.1rem 1rem 4rem; }
 .home-version a { color: var(--accent); text-decoration: none; }
 .home-version a:hover { text-decoration: underline; }
 
+.home-contact a { color: var(--accent); text-decoration: none; }
+.home-contact a:hover { text-decoration: underline; }
+
 /* ---------- today ---------- */
 
 .today-head {
